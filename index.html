@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Maple Solitaire</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: #1a120e;
+      background-image:
+        radial-gradient(ellipse at 15% 10%, rgba(80, 30, 15, 0.35) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 90%, rgba(60, 40, 15, 0.3) 0%, transparent 45%);
+      color: #e8d4b8;
+      font-family: Georgia, 'Segoe UI', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      user-select: none;
+      overflow-x: hidden;
+    }
+    h1 {
+      font-size: 1.35rem;
+      letter-spacing: 3px;
+      color: #e8a060;
+      text-shadow: 0 0 12px rgba(200, 100, 40, 0.35);
+      margin-bottom: 2px;
+    }
+    .sub {
+      font-size: 0.78rem;
+      color: #c08050;
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+    #top {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .stat {
+      background: rgba(40, 24, 16, 0.92);
+      border: 1px solid #6a3a20;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 0.85rem;
+      color: #e0c8a0;
+    }
+    .stat strong { color: #f0b070; }
+    #top-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 520px;
+    }
+    #stock-waste {
+      display: flex;
+      gap: 8px;
+    }
+    #foundations {
+      display: flex;
+      gap: 6px;
+    }
+    .pile {
+      width: 58px;
+      height: 82px;
+      border-radius: 6px;
+      border: 1px solid #5a3a22;
+      background: rgba(30, 18, 12, 0.7);
+      position: relative;
+      cursor: pointer;
+    }
+    .pile.stock {
+      border: 2px solid #8a4a28;
+      background: linear-gradient(160deg, #5a3020, #3a2010);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: #e0a060;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .pile.stock.empty {
+      border-style: dashed;
+      background: rgba(30, 18, 12, 0.5);
+      color: #6a4a30;
+    }
+    .pile.found {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: #6a4a30;
+    }
+    .pile.found.has { border-color: #c07030; }
+    #tableau {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 8px 4px;
+      max-width: 100%;
+      min-height: 340px;
+    }
+    .col {
+      position: relative;
+      width: 58px;
+      min-height: 320px;
+      flex-shrink: 0;
+    }
+    .card {
+      position: absolute;
+      width: 56px;
+      height: 80px;
+      border-radius: 6px;
+      border: 1px solid #4a2a18;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3px 5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+      transition: box-shadow 0.1s, transform 0.1s;
+    }
+    .card.face {
+      background: linear-gradient(165deg, #f8f0e0 0%, #f0e4d0 100%);
+      color: #2a1a10;
+    }
+    .card.face.red { color: #a02820; }
+    .card.face.black { color: #1a1a1a; }
+    .card.face::after {
+      content: '🍁';
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      font-size: 0.75rem;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .card.back {
+      background: linear-gradient(160deg, #8a3a20 0%, #5a2810 50%, #3a1c0c 100%);
+      border-color: #a05028;
+      color: transparent;
+    }
+    .card.back::after {
+      content: '🍁';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.4rem;
+      opacity: 0.85;
+    }
+    .card.selected {
+      box-shadow: 0 0 0 3px #f0a050, 0 4px 12px rgba(0,0,0,0.5);
+      transform: translateY(-4px);
+      z-index: 50 !important;
+    }
+    .card .rank { font-size: 0.9rem; line-height: 1; }
+    .card .suit { font-size: 1rem; text-align: center; }
+    #controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    button {
+      background: #3a2418;
+      color: #e8d0b0;
+      border: 1px solid #8a4a28;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    button:active { background: #4a3220; }
+    #message {
+      font-size: 0.9rem;
+      color: #e0b080;
+      min-height: 1.3em;
+      text-align: center;
+      margin: 6px 0;
+    }
+    #hint {
+      font-size: 0.75rem;
+      color: #a07050;
+      text-align: center;
+      max-width: 420px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>MAPLE SOLITAIRE</h1>
+  <div class="sub">Autumn Klondike · Leaf & Path</div>
+
+  <div id="top">
+    <div class="stat">Score: <strong id="score">0</strong></div>
+    <div class="stat">Moves: <strong id="moves">0</strong></div>
+    <div class="stat">Best: <strong id="best">0</strong></div>
+    <div class="stat">Wins: <strong id="wins">0</strong></div>
+  </div>
+
+  <div id="message">Build down alternating colors · Aces to foundations</div>
+
+  <div id="top-row">
+    <div id="stock-waste">
+      <div class="pile stock" id="stock">Deal</div>
+      <div class="pile" id="waste"></div>
+    </div>
+    <div id="foundations"></div>
+  </div>
+
+  <div id="tableau"></div>
+
+  <div id="controls">
+    <button id="btnNew">New Game</button>
+    <button id="btnUndo">Undo</button>
+    <button id="btnHint">Hint</button>
+  </div>
+  <div id="hint">Klondike · Build down alternating colors · Foundations build up by suit · Click stock to draw</div>
+
+  <script>
+    const SUITS = [
+      {s: '♠', color: 'black'},
+      {s: '♥', color: 'red'},
+      {s: '♦', color: 'red'},
+      {s: '♣', color: 'black'}
+    ];
+    const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    const VAL = {A:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,'10':10,J:11,Q:12,K:13};
+
+    let tableau = Array.from({length: 7}, () => []);
+    let foundations = [[], [], [], []]; // one per suit
+    let stock = [];
+    let waste = [];
+    let score = 0, moves = 0;
+    let selected = null; // {from: 'tab'|'waste'|'found', col, idx}
+    let history = [];
+    let best = 0, wins = 0;
+
+    try {
+      best = parseInt(localStorage.getItem('mapleSolBest') || '0', 10);
+      wins = parseInt(localStorage.getItem('mapleSolWins') || '0', 10);
+    } catch(e) {}
+
+    function updateStats() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('moves').textContent = moves;
+      document.getElementById('best').textContent = best;
+      document.getElementById('wins').textContent = wins;
+    }
+
+    function saveBest() {
+      if (score > best) {
+        best = score;
+        try { localStorage.setItem('mapleSolBest', best); } catch(e) {}
+      }
+      updateStats();
+    }
+
+    function makeDeck() {
+      const d = [];
+      for (const suit of SUITS) {
+        for (const r of RANKS) {
+          d.push({rank: r, suit: suit.s, color: suit.color, face: false});
+        }
+      }
+      for (let i = d.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [d[i], d[j]] = [d[j], d[i]];
+      }
+      return d;
+    }
+
+    function newGame() {
+      const deck = makeDeck();
+      tableau = Array.from({length: 7}, () => []);
+      for (let c = 0; c < 7; c++) {
+        for (let i = 0; i <= c; i++) {
+          const card = deck.pop();
+          card.face = (i === c);
+          tableau[c].push(card);
+        }
+      }
+      stock = deck;
+      waste = [];
+      foundations = [[], [], [], []];
+      score = 0;
+      moves = 0;
+      selected = null;
+      history = [];
+      document.getElementById('message').textContent = 'Build down alternating colors · Move Aces to foundations';
+      render();
+      updateStats();
+    }
+
+    function pushHistory() {
+      history.push({
+        tableau: tableau.map(c => c.map(card => ({...card}))),
+        foundations: foundations.map(f => f.map(card => ({...card}))),
+        stock: stock.map(c => ({...c})),
+        waste: waste.map(c => ({...c})),
+        score, moves
+      });
+      if (history.length > 30) history.shift();
+    }
+
+    function undo() {
+      if (!history.length) return;
+      const s = history.pop();
+      tableau = s.tableau;
+      foundations = s.foundations;
+      stock = s.stock;
+      waste = s.waste;
+      score = s.score;
+      moves = s.moves;
+      selected = null;
+      document.getElementById('message').textContent = 'Undo';
+      render();
+      updateStats();
+    }
+
+    function isAltDesc(a, b) {
+      return a.color !== b.color && VAL[a.rank] === VAL[b.rank] + 1;
+    }
+
+    function canPlaceOnTableau(card, col) {
+      const t = tableau[col];
+      if (t.length === 0) return card.rank === 'K';
+      const top = t[t.length - 1];
+      return top.face && isAltDesc(top, card);
+    }
+
+    function canPlaceOnFound(card, fIdx) {
+      const f = foundations[fIdx];
+      if (f.length === 0) return card.rank === 'A';
+      const top = f[f.length - 1];
+      return top.suit === card.suit && VAL[card.rank] === VAL[top.rank] + 1;
+    }
+
+    function drawStock() {
+      pushHistory();
+      if (stock.length === 0) {
+        // recycle waste
+        if (waste.length === 0) return;
+        stock = waste.reverse().map(c => ({...c, face: false}));
+        waste = [];
+      } else {
+        const card = stock.pop();
+        card.face = true;
+        waste.push(card);
+      }
+      moves++;
+      selected = null;
+      render();
+      updateStats();
+    }
+
+    function tryMoveToFound(card, fromInfo) {
+      for (let f = 0; f < 4; f++) {
+        if (canPlaceOnFound(card, f)) {
+          pushHistory();
+          // remove from source
+          if (fromInfo.from === 'waste') waste.pop();
+          else if (fromInfo.from === 'tab') {
+            tableau[fromInfo.col].pop();
+            const t = tableau[fromInfo.col];
+            if (t.length && !t[t.length-1].face) {
+              t[t.length-1].face = true;
+              score += 5;
+            }
+          }
+          foundations[f].push(card);
+          score += 10;
+          moves++;
+          selected = null;
+          checkWin();
+          render();
+          updateStats();
+          saveBest();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function tryMoveSequence(fromCol, fromIdx, toCol) {
+      const moving = tableau[fromCol].slice(fromIdx);
+      if (!moving[0].face) return false;
+      // validate sequence
+      for (let i = 0; i < moving.length - 1; i++) {
+        if (!isAltDesc(moving[i], moving[i+1])) return false;
+      }
+      if (!canPlaceOnTableau(moving[0], toCol)) return false;
+
+      pushHistory();
+      tableau[toCol].push(...moving);
+      tableau[fromCol].splice(fromIdx);
+      const src = tableau[fromCol];
+      if (src.length && !src[src.length-1].face) {
+        src[src.length-1].face = true;
+        score += 5;
+      }
+      moves++;
+      score += 1;
+      selected = null;
+      render();
+      updateStats();
+      saveBest();
+      return true;
+    }
+
+    function checkWin() {
+      if (foundations.every(f => f.length === 13)) {
+        score += 200;
+        wins++;
+        try { localStorage.setItem('mapleSolWins', wins); } catch(e) {}
+        saveBest();
+        document.getElementById('message').textContent = 'Victory! All foundations complete · Score ' + score;
+      }
+    }
+
+    function select(from, col, idx) {
+      // Double-click / re-select same → try auto foundation
+      if (selected && selected.from === from && selected.col === col && selected.idx === idx) {
+        let card = null;
+        if (from === 'waste' && waste.length) card = waste[waste.length-1];
+        else if (from === 'tab') card = tableau[col][tableau[col].length-1];
+        if (card && tryMoveToFound(card, {from, col, idx})) return;
+        selected = null;
+        render();
+        return;
+      }
+
+      if (selected) {
+        // attempt move
+        if (from === 'tab' && selected.from === 'tab') {
+          if (tryMoveSequence(selected.col, selected.idx, col)) return;
+        }
+        if (from === 'tab' && selected.from === 'waste') {
+          const card = waste[waste.length-1];
+          if (card && canPlaceOnTableau(card, col)) {
+            pushHistory();
+            waste.pop();
+            tableau[col].push(card);
+            moves++; score += 1;
+            selected = null;
+            render(); updateStats(); saveBest();
+            return;
+          }
+        }
+        if (from === 'found') {
+          // try drop on foundation from selected
+          let card = null;
+          if (selected.from === 'waste') card = waste[waste.length-1];
+          else if (selected.from === 'tab') card = tableau[selected.col][tableau[selected.col].length-1];
+          if (card && tryMoveToFound(card, selected)) return;
+        }
+      }
+
+      // new selection
+      if (from === 'waste' && waste.length) {
+        selected = {from: 'waste', col: 0, idx: waste.length-1};
+      } else if (from === 'tab') {
+        if (!tableau[col][idx] || !tableau[col][idx].face) return;
+        // only allow selecting a valid sequence start
+        let ok = true;
+        for (let i = idx; i < tableau[col].length-1; i++) {
+          if (!isAltDesc(tableau[col][i], tableau[col][i+1])) { ok = false; break; }
+        }
+        if (ok || idx === tableau[col].length-1) selected = {from: 'tab', col, idx};
+      }
+      render();
+    }
+
+    function createCardEl(card, extraClass = '') {
+      const el = document.createElement('div');
+      el.className = 'card ' + (card.face ? 'face ' + card.color : 'back') + ' ' + extraClass;
+      if (card.face) {
+        el.innerHTML = `<span class="rank">${card.rank}</span><span class="suit">${card.suit}</span>`;
+      }
+      return el;
+    }
+
+    function render() {
+      // Stock
+      const stockEl = document.getElementById('stock');
+      if (stock.length) {
+        stockEl.className = 'pile stock';
+        stockEl.textContent = 'Draw\n' + stock.length;
+      } else if (waste.length) {
+        stockEl.className = 'pile stock';
+        stockEl.textContent = 'Recycle';
+      } else {
+        stockEl.className = 'pile stock empty';
+        stockEl.textContent = 'Empty';
+      }
+
+      // Waste
+      const wasteEl = document.getElementById('waste');
+      wasteEl.innerHTML = '';
+      if (waste.length) {
+        const card = waste[waste.length-1];
+        const el = createCardEl(card);
+        el.style.position = 'relative';
+        if (selected && selected.from === 'waste') el.classList.add('selected');
+        el.onclick = e => { e.stopPropagation(); select('waste', 0, waste.length-1); };
+        wasteEl.appendChild(el);
+      }
+
+      // Foundations
+      const foundEl = document.getElementById('foundations');
+      foundEl.innerHTML = '';
+      for (let f = 0; f < 4; f++) {
+        const pile = document.createElement('div');
+        pile.className = 'pile found' + (foundations[f].length ? ' has' : '');
+        if (foundations[f].length) {
+          const top = foundations[f][foundations[f].length-1];
+          const el = createCardEl(top);
+          el.style.position = 'relative';
+          pile.appendChild(el);
+        } else {
+          pile.textContent = 'A';
+        }
+        pile.onclick = () => select('found', f, 0);
+        foundEl.appendChild(pile);
+      }
+
+      // Tableau
+      const tabEl = document.getElementById('tableau');
+      tabEl.innerHTML = '';
+      for (let c = 0; c < 7; c++) {
+        const colEl = document.createElement('div');
+        colEl.className = 'col';
+
+        if (tableau[c].length === 0) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'position:absolute;top:0;width:56px;height:80px;border:1px dashed #5a3a22;border-radius:6px;';
+          empty.onclick = () => {
+            if (selected) {
+              if (selected.from === 'tab') tryMoveSequence(selected.col, selected.idx, c);
+              else if (selected.from === 'waste') {
+                const card = waste[waste.length-1];
+                if (card && canPlaceOnTableau(card, c)) {
+                  pushHistory();
+                  waste.pop();
+                  tableau[c].push(card);
+                  moves++; score += 1;
+                  selected = null;
+                  render(); updateStats(); saveBest();
+                }
+              }
+            }
+          };
+          colEl.appendChild(empty);
+        }
+
+        tableau[c].forEach((card, i) => {
+          const el = createCardEl(card);
+          el.style.top = (i * 22) + 'px';
+          el.style.zIndex = i;
+          if (selected && selected.from === 'tab' && selected.col === c && selected.idx === i) {
+            el.classList.add('selected');
+          }
+          el.onclick = e => {
+            e.stopPropagation();
+            select('tab', c, i);
+          };
+          colEl.appendChild(el);
+        });
+
+        colEl.onclick = () => {
+          if (selected && selected.from === 'tab' && selected.col !== c) {
+            tryMoveSequence(selected.col, selected.idx, c);
+          } else if (selected && selected.from === 'waste') {
+            const card = waste[waste.length-1];
+            if (card && canPlaceOnTableau(card, c)) {
+              pushHistory();
+              waste.pop();
+              tableau[c].push(card);
+              moves++; score += 1;
+              selected = null;
+              render(); updateStats(); saveBest();
+            }
+          }
+        };
+        tabEl.appendChild(colEl);
+      }
+    }
+
+    document.getElementById('stock').onclick = drawStock;
+    document.getElementById('btnNew').onclick = newGame;
+    document.getElementById('btnUndo').onclick = undo;
+    document.getElementById('btnHint').onclick = () => {
+      document.getElementById('message').textContent = 'Down alternating colors · Kings on empty · Aces start foundations · Click stock to draw';
+    };
+
+    // Double-click waste or top tableau card → auto to foundation
+    document.addEventListener('dblclick', e => {
+      if (selected) {
+        let card = null;
+        if (selected.from === 'waste') card = waste[waste.length-1];
+        else if (selected.from === 'tab') card = tableau[selected.col][tableau[selected.col].length-1];
+        if (card) tryMoveToFound(card, selected);
+      }
+    });
+
+    updateStats();
+    newGame();
+  </script>
+</body>
+</html>
